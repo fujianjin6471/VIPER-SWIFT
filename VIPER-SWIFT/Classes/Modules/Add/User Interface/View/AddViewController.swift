@@ -11,35 +11,32 @@ import UIKit
 
 class AddViewController: UIViewController, UITextFieldDelegate, AddViewInterface {
     var eventHandler : AddModuleInterface?
-
-    @IBOutlet var nameTextField : UITextField
+    
+    @IBOutlet var nameTextField : UITextField!
     @IBOutlet var datePicker : UIDatePicker?
     
     var minimumDate : NSDate = NSDate()
     var transitioningBackgroundView : UIView = UIView()
     
     @IBAction func save(sender: AnyObject) {
-        eventHandler?.saveAddActionWithName(nameTextField.text, dueDate: datePicker!.date)
+        eventHandler?.saveAddActionWithName(nameTextField.text!, dueDate: datePicker!.date)
     }
     
     @IBAction func cancel(sender: AnyObject) {
-        nameTextField.resignFirstResponder()
         eventHandler?.cancelAddAction()
     }
     
     override func viewDidAppear(animated: Bool) {
         super.viewDidAppear(animated)
         
-        var gestureRecognizer = UITapGestureRecognizer()
-        gestureRecognizer.addTarget(self, action: Selector("dismiss"))
+        let gestureRecognizer = UITapGestureRecognizer(target: self, action: "dismiss")
+        transitioningBackgroundView.addGestureRecognizer(gestureRecognizer)
         
         transitioningBackgroundView.userInteractionEnabled = true
         
         nameTextField.becomeFirstResponder()
         
-        if let realDatePicker = datePicker {
-            realDatePicker.minimumDate = minimumDate
-        }
+        datePicker?.minimumDate = minimumDate
     }
     
     override func viewWillDisappear(animated: Bool) {
@@ -52,25 +49,20 @@ class AddViewController: UIViewController, UITextFieldDelegate, AddViewInterface
         eventHandler?.cancelAddAction()
     }
     
-    func setEntryName(name: NSString) {
+    func setEntryName(name: String) {
         nameTextField.text = name
     }
     
     func setEntryDueDate(date: NSDate) {
-        if let realDatePicker = datePicker {
-            realDatePicker.minimumDate = date
-        }
+        datePicker?.date = date
     }
     
     func setMinimumDueDate(date: NSDate) {
         minimumDate = date
-        
-        if let realDatePicker = datePicker {
-            realDatePicker.minimumDate = date
-        }
+        datePicker?.minimumDate = date
     }
     
-    func textFieldShouldReturn(textField: UITextField!) -> Bool {
+    func textFieldShouldReturn(textField: UITextField) -> Bool {
         textField.resignFirstResponder()
         
         return true

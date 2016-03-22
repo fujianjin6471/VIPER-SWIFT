@@ -10,7 +10,7 @@ import Foundation
 import CoreData
 
 extension Array {
-    func lastObject() -> T {
+    func lastObject() -> Element {
         let endIndex = self.endIndex
         let lastItemIndex = endIndex - 1
         
@@ -19,53 +19,56 @@ extension Array {
 }
 
 class CoreDataStore : NSObject {
-    var persistentStoreCoordinator : NSPersistentStoreCoordinator?
-    var managedObjectModel : NSManagedObjectModel?
-    var managedObjectContext : NSManagedObjectContext?
+    var persistentStoreCoordinator : NSPersistentStoreCoordinator
+    var managedObjectModel : NSManagedObjectModel
+    var managedObjectContext : NSManagedObjectContext
     
-    init() {
-        managedObjectModel = NSManagedObjectModel.mergedModelFromBundles(nil)
+    override init() {
+        managedObjectModel = NSManagedObjectModel.mergedModelFromBundles(nil)!
         
         persistentStoreCoordinator = NSPersistentStoreCoordinator(managedObjectModel: managedObjectModel)
         
         let domains = NSSearchPathDomainMask.UserDomainMask
         let directory = NSSearchPathDirectory.DocumentDirectory
         
-        let error = NSError()
         let applicationDocumentsDirectory : AnyObject = NSFileManager.defaultManager().URLsForDirectory(directory, inDomains: domains).lastObject()
         let options = [NSMigratePersistentStoresAutomaticallyOption : true, NSInferMappingModelAutomaticallyOption : true]
         
         let storeURL = applicationDocumentsDirectory.URLByAppendingPathComponent("VIPER-SWIFT.sqlite")
         
-        persistentStoreCoordinator!.addPersistentStoreWithType(NSSQLiteStoreType, configuration: "", URL: storeURL, options: options, error: nil)
-
+        try! persistentStoreCoordinator.addPersistentStoreWithType(NSSQLiteStoreType, configuration: nil, URL: storeURL, options: options)
+        
         managedObjectContext = NSManagedObjectContext(concurrencyType: NSManagedObjectContextConcurrencyType.MainQueueConcurrencyType)
-        managedObjectContext!.persistentStoreCoordinator = persistentStoreCoordinator
-        managedObjectContext!.undoManager = nil
+        managedObjectContext.persistentStoreCoordinator = persistentStoreCoordinator
+        managedObjectContext.undoManager = nil
         
         super.init()
     }
     
-    func fetchEntriesWithPredicate(predicate: NSPredicate, sortDescriptors: AnyObject[], completionBlock: ((ManagedTodoItem[]) -> Void)!) {
+    func fetchEntriesWithPredicate(predicate: NSPredicate, sortDescriptors: [NSSortDescriptor], completionBlock: (([ManagedTodoItem]) -> Void)!) {
         let fetchRequest = NSFetchRequest(entityName: "TodoItem")
         fetchRequest.predicate = predicate
         fetchRequest.sortDescriptors = []
         
-        managedObjectContext?.performBlock {
-            let queryResults = self.managedObjectContext?.executeFetchRequest(fetchRequest, error: nil)
-            let managedResults = queryResults! as ManagedTodoItem[]
+        managedObjectContext.performBlock {
+            let queryResults = try! self.managedObjectContext.executeFetchRequest(fetchRequest)
+            let managedResults = queryResults as! [ManagedTodoItem]
             completionBlock(managedResults)
         }
     }
     
     func newTodoItem() -> ManagedTodoItem {
-        let entityDescription = NSEntityDescription.entityForName("TodoItem", inManagedObjectContext: managedObjectContext)
-        let newEntry = NSManagedObject(entity: entityDescription, insertIntoManagedObjectContext: managedObjectContext) as ManagedTodoItem
-        
+        let newEntry = NSEntityDescription.insertNewObjectForEntityForName("TodoItem", inManagedObjectContext: managedObjectContext) as! ManagedTodoItem
         return newEntry
     }
     
     func save() {
-        managedObjectContext?.save(nil)
+        if managedObjectContext.hasChanges {
+            do {
+                try managedObjectContext.save()
+            } catch let error as NSError {
+                print("Could not save\nError: \(error)\nerror.localizedDescription: \(error.localizedDescription)")
+            }
+        }
     }
 }
